@@ -23,7 +23,7 @@ struct Score<R, W> {
 
 fn score<R, W>(reader: R, writer: W) -> Score<R, W>
     where R: AsyncRead,
-          W: AsyncWrite,
+          W: AsyncWrite
 {
     Score {
         reader: Some(reader),
@@ -32,13 +32,13 @@ fn score<R, W>(reader: R, writer: W) -> Score<R, W>
         pos: 0,
         cap: 0,
         buf: Box::new([0; 2048]),
-        score: 0u64
+        score: 0u64,
     }
 }
 
 impl<R, W> Future for Score<R, W>
     where R: AsyncRead,
-          W: AsyncWrite,
+          W: AsyncWrite
 {
     type Item = (u64, R, W);
     type Error = stdio::Error;
@@ -74,10 +74,13 @@ impl<R, W> Future for Score<R, W>
                     let writer = self.writer.as_mut().unwrap();
                     try_nb!(writer.write(&['\n' as u8]));
                 }
-                try_nb!(self.writer.as_mut().unwrap().flush());
+                try_nb!(self.writer
+                            .as_mut()
+                            .unwrap()
+                            .flush());
                 let reader = self.reader.take().unwrap();
                 let writer = self.writer.take().unwrap();
-                return Ok((wpos as u64, reader, writer).into())
+                return Ok((wpos as u64, reader, writer).into());
             }
         }
     }
@@ -91,17 +94,17 @@ fn main() {
     let addr = "127.0.0.1:12345".parse().unwrap();
     let tcp = TcpListener::bind(&addr, &handle).unwrap();
 
-    let server = tcp.incoming().for_each(|(client_stream, client_sock)|{
+    let server = tcp.incoming().for_each(|(client_stream, client_sock)| {
         print!("New Connection from: {} ", &client_sock);
         counter = counter + 1u64;
         let (reader, writer) = client_stream.split();
 
         let s = score(reader, writer);
-        let score_handle = s.map(|(n, _, _)| {
-            println!("wrote {} bytes", n)
-        }).map_err(|err| {
-            println!("IO error: {:?}", err)
-        });
+        let score_handle =
+            s.map(|(n, _, _)| println!("wrote {} bytes", n)).map_err(|err| {
+                                                                         println!("IO error: {:?}",
+                                                                                  err)
+                                                                     });
 
         handle.spawn(score_handle);
 
@@ -114,4 +117,3 @@ fn main() {
 
     ev_loop.run(server).unwrap();
 }
-
